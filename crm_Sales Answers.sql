@@ -7,9 +7,9 @@ USE crm_sales;
 
 with sector_wins as (
 	select
-		sector																Sector
-		,sum(close_value)													Close_Value
-        ,sum(case when deal_stage = 'Won' then 1 else 0 end) / count(*)		Sector_Win_Rate
+		sector									Sector
+		,sum(close_value)							Close_Value
+        	,sum(case when deal_stage = 'Won' then 1 else 0 end) / count(*)		Sector_Win_Rate
 	from
 		sales_pipeline sp
 	left join accounts ac on sp.account = ac.account
@@ -19,10 +19,10 @@ with sector_wins as (
 
 select
 	Sector
-    ,concat('$', format(Close_Value, 0)) 									Close_Value	
-    ,concat(round(Close_Value * 100 / sum(Close_Value) OVER (), 2),'%')		Percentage_of_Total_Close_Value
-    ,concat(round(Sector_Win_Rate * 100),'%')								Sector_Win_Rate
-    ,rank() over (order by Close_Value desc)								Ranking
+	,concat('$', format(Close_Value, 0)) 						Close_Value	
+    	,concat(round(Close_Value * 100 / sum(Close_Value) OVER (), 2),'%')		Percentage_of_Total_Close_Value
+    	,concat(round(Sector_Win_Rate * 100),'%')					Sector_Win_Rate
+    	,rank() over (order by Close_Value desc)					Ranking
 from
 	sector_wins
 order by 5;
@@ -42,18 +42,19 @@ with top_accounts as (
 	left join accounts ac on sp.account = ac.account
 	where
 		deal_stage = 'Won'
-	group by sp.account
+	group by 
+		sp.account
 	order by 3 desc
 )
 
 select
 	Account
-    ,Sector
-    ,concat('$', format(Close_Value,'N0'))											Close_Value
-    ,Number_Of_Deals
-    ,concat((ROUND(Close_Value * 100.0 / SUM(Close_Value) OVER (), 2)),'%')			Percentage_of_Total_Close_Value
-    ,concat('$', format(Avg_Close_Value, 'N2'))										Avg_Close_Value
-    ,rank() over (order by Close_Value desc)										Ranking	
+    	,Sector
+    	,concat('$', format(Close_Value,'N0'))							Close_Value
+    	,Number_Of_Deals
+    	,concat((ROUND(Close_Value * 100.0 / SUM(Close_Value) OVER (), 2)),'%')			Percentage_of_Total_Close_Value
+    	,concat('$', format(Avg_Close_Value, 'N2'))						Avg_Close_Value
+    	,rank() over (order by Close_Value desc)						Ranking	
 from
 	top_accounts
 order by 7;
@@ -64,7 +65,7 @@ with Accounts_MoM_Performance_cte as (
     select
         account
         ,date_format(close_date, '%Y-%m-01')		Beginning_of_Month
-        ,sum(close_value)							Close_Value
+        ,sum(close_value)				Close_Value
     from sales_pipeline
     group by
 		account
@@ -75,11 +76,11 @@ select
     account																								Account	
     ,Beginning_of_Month
     ,concat('$',format(lag(Close_Value) over (order by account, Beginning_of_Month),'N0'))				Prev_Month_Close_Value
-    ,concat('$',format(round(Close_Value, 2),'N0'))														Close_Value
+    ,concat('$',format(round(Close_Value, 2),'N0'))									Close_Value
     ,case
-		when Close_Value is null then 0
+	when Close_Value is null then 0
         else concat(round((Close_Value - lag(Close_Value) over (order by account, Beginning_of_Month)) 
-			  / lag(Close_Value) over (order by account, Beginning_of_Month) * 100, 2),'%')
+		/ lag(Close_Value) over (order by account, Beginning_of_Month) * 100, 2),'%')
 	end																									MoM_Change
 from
 	Accounts_MoM_Performance_cte
@@ -106,7 +107,7 @@ with prospective_sales_cte as (
 )
 
 select
-	 count(*) 										Number_of_Opportunities
+	 count(*) 					Number_of_Opportunities
     ,concat('$', format(sum(sales_price), '2')) 	Total_Pipeline_Value
 from
 	prospective_sales_cte ps;
@@ -117,13 +118,13 @@ with deal_stage_analysis_cte as (
 
 	select
 		deal_stage as Deal_Stage
-		,count(*)																			Number_of_Opportunities
+		,count(*)								Number_of_Opportunities
 		,case 
 			when deal_stage = "Won" then sum(close_value)
 			when deal_stage = 'Lost' then sum(sales_price)
 			when deal_stage = 'Prospecting' then sum(sales_price)
 			when deal_stage = 'Engaging' then sum(sales_price)
-		end																					costs_and_values
+		end									costs_and_values
 	from
 		sales_pipeline sp 
 	left join products pr on sp.product = pr.product
@@ -133,7 +134,7 @@ with deal_stage_analysis_cte as (
 
 select
 	Deal_Stage
-    ,format(Number_of_Opportunities, 'N0')			Number_of_Opportunities
+    ,format(Number_of_Opportunities, 'N0')		Number_of_Opportunities
     ,concat('$', format(costs_and_values, 'N0'))	Close_Value
 from
 	deal_stage_analysis_cte
@@ -144,31 +145,31 @@ order by
 
 with aggregation_cte as (
 	select
-		 sum(case when deal_stage = 'Won' then 1 else 0 end) 				Number_of_Wins
-		,sum(case when deal_stage = 'Lost' then 1 else 0 end) 				Number_of_Losses
+		 sum(case when deal_stage = 'Won' then 1 else 0 end) 			Number_of_Wins
+		,sum(case when deal_stage = 'Lost' then 1 else 0 end) 			Number_of_Losses
 		,sum(case when deal_stage in ('Won', 'Lost') then 1 else 0 end) 	Total_Closed_Opportunities
 	from
 		sales_pipeline
 )
 
 select
-	format(Number_of_Wins, 'N0')																	Number_of_Wins																
-    ,format(Number_of_Losses, 'N0')																	Number_of_Losses
+	format(Number_of_Wins, 'N0')										Number_of_Wins																
+    ,format(Number_of_Losses, 'N0')										Number_of_Losses
 	,concat(cast((Number_of_Wins * 100.0 / Total_Closed_Opportunities) as decimal(10,2)), '%')		Win_Rate
-    ,concat(cast((Number_of_Losses * 100.0 / Total_Closed_Opportunities) as decimal(10,2)), '%')	Loss_Rate
+    ,concat(cast((Number_of_Losses * 100.0 / Total_Closed_Opportunities) as decimal(10,2)), '%')		Loss_Rate
 from aggregation_cte;
 
 -- What is the win close value and % change by month?
 
 select
 	month(close_date)	Month
-    ,concat('$',format(lag(sum(close_value)) over (order by month(close_date)),'N0'))						Prev_Month_Close_Value
-    ,concat('$', format(sum(close_value), 'N0'))															Close_Value
+    ,concat('$',format(lag(sum(close_value)) over (order by month(close_date)),'N0'))			Prev_Month_Close_Value
+    ,concat('$', format(sum(close_value), 'N0'))							Close_Value
     ,case
 		when lag(sum(close_value)) over (order by month(close_date)) = 0 then 0
         else concat(round((sum(close_value) - lag(sum(close_value)) 
 			over (order by month(close_date))) / lag(sum(close_value)) 
-													over (order by month(close_date)) * 100,2),'%')
+			over (order by month(close_date)) * 100,2),'%')
 	end																										MoM_Change				
 from
 	sales_pipeline
@@ -214,24 +215,24 @@ wins_buckets_cte as (
 aggregations_cte as (
 	select distinct
 		duration_bucket
-		,round(avg(deal_duration) over (partition by duration_bucket), 2)		average_deal_duration
+		,round(avg(deal_duration) over (partition by duration_bucket), 2)			average_deal_duration
 		,sum(close_value) over (partition by duration_bucket)					total_close_value
 		,round(
 			sum(close_value) over (partition by duration_bucket) * 100.0 /
 			sum(close_value) over ()
 			,2
-		)																		percentage_of_total_close_value
-		,count(*) over (partition by duration_bucket)							opportunity_count
+		)											percentage_of_total_close_value
+		,count(*) over (partition by duration_bucket)						opportunity_count
 	from wins_buckets_cte
 	order by 4 desc
 )
 
 select
 	duration_bucket
-	,concat(average_deal_duration, ' days')										Average_Deal_Duration
-	,concat('$', format(total_close_value, 0))									Total_Close_Value
-	,concat(percentage_of_total_close_value, '%')								Percentage_of_Total_Close_Value
-	,format(opportunity_count, 'N0')											Number_of_Opportunities		
+	,concat(average_deal_duration, ' days')								Average_Deal_Duration
+	,concat('$', format(total_close_value, 0))							Total_Close_Value
+	,concat(percentage_of_total_close_value, '%')							Percentage_of_Total_Close_Value
+	,format(opportunity_count, 'N0')								Number_of_Opportunities		
 from aggregations_cte
 order by opportunity_count desc;
 
@@ -259,13 +260,13 @@ where
 with question_2_1_cte as (
 
 select 						
-    month(close_date)											Month
+    month(close_date)												Month
     ,st.manager													Manager
-    ,sum(close_value)											Close_Value
+    ,sum(close_value)												Close_Value
     ,sum(sum(close_value)) over 
-		(partition by month(close_date))						Total_Value
+		(partition by month(close_date))								Total_Value
 	,sum(close_value) / sum(sum(close_value)) over 				
-    (partition by month(close_date))							Percent_Closed
+    (partition by month(close_date))										Percent_Closed
     ,rank() over (partition by month(close_date) order by sum(close_value) desc) manager_rank_in_month
 from 
 	sales_pipeline sp 
@@ -307,12 +308,12 @@ with opportunity_durations as (
 manager_summary as (
 	select
 		manager
-		,count(*)																			total_opportunities
-		,sum(case when deal_stage = 'Won' then 1 else 0 end) 								won_opportunities
-		,round(avg(case when deal_stage = 'Won' then deal_duration_days end), 2)			avg_days_to_close_won
-		,round(avg(close_value), 2)															avg_deal_value
-		,round(stddev_pop(close_value), 2)													deal_value_stddev
-		,round(sum(case when deal_stage = 'Won' then close_value else 0 end), 2)			total_close_value
+		,count(*)										total_opportunities
+		,sum(case when deal_stage = 'Won' then 1 else 0 end) 					won_opportunities
+		,round(avg(case when deal_stage = 'Won' then deal_duration_days end), 2)		avg_days_to_close_won
+		,round(avg(close_value), 2)								avg_deal_value
+		,round(stddev_pop(close_value), 2)							deal_value_stddev
+		,round(sum(case when deal_stage = 'Won' then close_value else 0 end), 2)		total_close_value
 		,round(sum(case when deal_stage = 'Won' then 1 else 0 end) * 100.0 / count(*), 2)	win_rate_percent
 	from 
 		opportunity_durations
@@ -322,14 +323,14 @@ manager_summary as (
 )
 
 select
-	manager											Manager
-	,format(total_opportunities,'N0')				Total_Opportunities
-	,format(won_opportunities,'N0')					Won_Opportunities
-	,avg_days_to_close_won							Avg_Days_to_Close
+	manager							Manager
+	,format(total_opportunities,'N0')			Total_Opportunities
+	,format(won_opportunities,'N0')				Won_Opportunities
+	,avg_days_to_close_won					Avg_Days_to_Close
 	,concat('$',format(avg_deal_value,0))			Avg_Deal_Value
 	,concat('$', format(deal_value_stddev,0))		Deal_Value_Stddev
 	,concat('$', format(total_close_value, 0))		Total_Close_Value		
-	,concat(win_rate_percent, '%')					Win_Rate
+	,concat(win_rate_percent, '%')				Win_Rate
 from
 	manager_summary
 order by 
@@ -342,7 +343,7 @@ with agent_performance as (
         st.manager
         ,sp.sales_agent
         ,count(*)			won_deals
-        ,sum(close_value)	total_close_value
+        ,sum(close_value)		total_close_value
     from
 		sales_pipeline sp
     left join sales_teams st on sp.sales_agent = st.sales_agent
@@ -357,7 +358,7 @@ select
     manager
     ,sales_agent
     ,won_deals
-    ,concat('$', format(ROUND(total_close_value, 2),0))						Total_Close_Value
+    ,concat('$', format(ROUND(total_close_value, 2),0))				Total_Close_Value
     ,rank() over (partition by manager order by total_close_value desc)		Agent_Rank_Within_Team
 from agent_performance
 order by manager, agent_rank_within_team;
@@ -382,12 +383,12 @@ order by 1, 4;
 -- What is the win rate per product across all opportunities?
 
 select
-	product																							Product
-	,format(sum(case when deal_stage = "Won" then 1 else 0 end),'N0')								Wins
-    ,format(count(*),'N0')																			Instances
-    ,concat(round((sum(case when deal_stage = "Won" then 1 else 0 end) / count(*)) * 100, 2),'%')	Win_Rate
-	,concat('$',format(round(avg(close_value),2),'N0'))												Average_Close_Value
-    ,concat('$',format(round(sum(close_value),2),'N0'))												Total_Close_Value
+	product													Product
+	,format(sum(case when deal_stage = "Won" then 1 else 0 end),'N0')					Wins
+    ,format(count(*),'N0')											Instances
+    ,concat(round((sum(case when deal_stage = "Won" then 1 else 0 end) / count(*)) * 100, 2),'%')		Win_Rate
+	,concat('$',format(round(avg(close_value),2),'N0'))							Average_Close_Value
+    ,concat('$',format(round(sum(close_value),2),'N0'))								Total_Close_Value
 from
 	sales_pipeline
 group by
@@ -398,10 +399,10 @@ order by
 -- What is the average deal size by product category or family?
 
 select
-	month(close_date) 																Month
-    ,product Product
-	,concat('$', format(round(avg(close_value), 2),'N0'))							Monthly_Closing
-    ,rank() over (partition by month(close_date) order by avg(close_value) desc) 	Product_Ranking
+	month(close_date) 								Month
+    	,product 									Product
+	,concat('$', format(round(avg(close_value), 2),'N0'))				Monthly_Closing
+    	,rank() over (partition by month(close_date) order by avg(close_value) desc) 	Product_Ranking
 from 
 	sales_pipeline
 where 
@@ -415,7 +416,7 @@ order by 1, 4;
 select
 	sp.product
     ,format(count(*),'N0') 																						Number_Of_Opportunities
-    ,concat(round((sum(case when deal_stage = "Won" then 1 else 0 end) / count(*)) * 100, 2),'%')				Win_Rate
+    ,concat(round((sum(case when deal_stage = "Won" then 1 else 0 end) / count(*)) * 100, 2),'%')		Win_Rate
     ,rank() over (order by round((sum(case when deal_stage = "Won" then 1 else 0 end) / count(*)) * 100, 2)) 	Ranking
 from
 	sales_pipeline sp left join products pr on sp.product = pr.product
